@@ -1,0 +1,113 @@
+<project name="stegan" basedir="." default="install">
+
+	<property name="src" value="src" />
+	<property name="lib" value="lib" />
+	<property name="target" value="target" />
+	<property name="src-main" location="${src}/main/java" />
+	<property name="src-test" location="${src}/test/java" />
+	<property name="res-main" location="${src}/main/resources" />
+	<property name="res-test" location="${src}/test/resources" />
+	<property name="target-main" location="${target}/main/classes" />
+	<property name="target-test" location="${target}/test/classes" />
+	<property name="target-res-test" location="${target}/test/resources" />
+	<property name="target-res-main" location="${target}/main/resources" />
+	<property name="test-result" location="${target}/test/result" />
+
+	<path id="test-classpath">
+		<pathelement location="${target-main}" />
+		<fileset dir="${lib}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<!-- delete the target dir -->
+	<target name="clean">
+		<delete dir="${target}" />
+		<delete dir="${basedir}/bin" />
+		<delete dir="${basedir}/temp" />
+		<delete file="${basedir}/stegan" />
+	</target>
+
+	<!-- compile main -->
+	<target name="compile-main">
+		<mkdir dir="${target-main}" />
+		<javac srcdir="${src-main}" destdir="${target-main}" />
+	</target>
+
+	<!-- compile tests -->
+	<target name="compile-test" depends="compile-main">
+		<mkdir dir="${target-test}" />
+		<copy todir="${target-res-test}">
+			<fileset dir="${res-test}"/>
+		</copy>
+		<javac srcdir="${src-test}" destdir="${target-test}">
+			<classpath refid="test-classpath" />
+		</javac>
+	</target>
+
+	<!-- compile main and compile tests -->
+	<target name="compile-all" depends="compile-test" />
+
+	<!-- run unit tests -->
+	<target name="test" depends="compile-all">
+		<echo>Running unit tests</echo>
+		<mkdir dir="${test-result}" />
+		<junit printsummary="withOutAndErr" haltonfailure="yes">
+			<classpath>
+				<pathelement location="${target-test}" />
+				<pathelement path="${java.class.path}" />
+			</classpath>
+			<classpath refid="test-classpath" />
+			<formatter type="xml" />
+			<batchtest fork="no" todir="${test-result}">
+				<fileset dir="${src-test}">
+					<include name="**/Test*.java" />
+				</fileset>
+			</batchtest>
+		</junit>
+	</target>
+	
+	<!-- run integration tests -->
+	<target name="itest" depends="clean, compile-all">
+		<echo>Running integration tests</echo>
+		<mkdir dir="${test-result}" />
+		<junit printsummary="withOutAndErr" haltonfailure="yes">
+			<classpath>
+				<pathelement location="${target-test}" />
+				<pathelement path="${java.class.path}" />
+			</classpath>
+			<classpath refid="test-classpath" />
+			<formatter type="xml" />
+			<batchtest fork="no" todir="${test-result}">
+				<fileset dir="${src-test}">
+					<include name="**/ITest*.java" />
+				</fileset>
+			</batchtest>
+		</junit>
+	</target>
+
+	<!-- create a jar file -->
+	<target name="jar" depends="compile-main">
+		<jar destfile="${target}/SteganMain.jar" basedir="${target-main}">
+			<manifest>
+				<attribute name="Main-Class" value="edu.neu.ccs.kemf.SteganMain" />
+			</manifest>
+		</jar>
+	</target>
+
+	<!-- 
+		cleans, compiles, creates a jar, copies the execution script
+		to the base directory and makes it executable 
+	-->
+	<target name="install" depends="clean,jar">
+		<mkdir dir="${target-res-main}" />
+		<copy file="${res-main}/mp3tags.py" todir="${target}" />
+		<copy file="${res-main}/stegan" todir="${basedir}" />
+		<chmod file="${basedir}/stegan" perm="+x" />
+	</target>
+
+	<target name="install-test" depends="clean,test,itest,install">
+	</target>
+	
+
+</project>
